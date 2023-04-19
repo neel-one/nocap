@@ -2,7 +2,9 @@
 #include <math.h>
 
 int main() {
-    double x = 5;
-    double y = exp(x);
+    for (int i = 0; i <= 20; i++) {
+        double x = i;
+        double y = exp(x);
+    }
     return 0;
 }

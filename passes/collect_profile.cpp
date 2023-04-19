@@ -46,13 +46,13 @@ struct Hello : public FunctionPass {
       }
     }
     // For debug purposes only.
-    for (BasicBlock &BB : F) {
-      errs() << "===============================\n";
-      for (Instruction &I : BB) {
-        errs() << I << "\n";
-      }
-      errs() << "===============================\n";
-    }
+    // for (BasicBlock &BB : F) {
+    //   outs() << "===============================\n";
+    //   for (Instruction &I : BB) {
+    //     outs() << I << "\n";
+    //   }
+    //   outs() << "===============================\n";
+    // }
     return true;
   }
 }; // end of struct Hello

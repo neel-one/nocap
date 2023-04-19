@@ -1,13 +1,31 @@
 import argparse
 from pathlib import Path
 import shutil
+import subprocess
 
 def build():
-    # Do something for the build command
-    print("Running build command...")
+    build_profile()
+    build_from_file('build/tmp/a_out')
+
+def build_profile():
+    srcs = []
+    for path in Path('test').glob('*.c'):
+        srcs.append(f'test/{path.name}')
+    src_string = ' '.join(srcs)
+    wd = Path('build')
+    Path(wd/'tmp').mkdir(exist_ok=True)
+    subprocess.run(f'clang -emit-llvm {src_string} -c -o build/tmp/test.bc', shell=True)
+    subprocess.run('opt -enable-new-pm=0 -load build/passes/LLVMPJT.so -hello -o build/tmp/a.bc < build/tmp/test.bc > /dev/null', shell=True)
+    subprocess.run('llc tmp/a.bc -o tmp/a.s', cwd=wd, shell=True)
+    # TODO: make this resilient to user LDFlags/Compiler flags (they should define compilation not us...)
+    subprocess.run('clang tmp/a.s -lm -o tmp/a', cwd=wd, shell=True)
+    subprocess.run('./tmp/a > tmp/a_out', cwd=wd, shell=True)
 
 def clean():
     p = Path('build/src')
+    for path in p.glob('*'):
+        path.unlink()
+    p = Path('build/tmp')
     for path in p.glob('*'):
         path.unlink()
 
@@ -44,6 +62,9 @@ def analyze_file(file):
     }
 
 def build_from_file(file):
+    if args.func is None:
+        print("ERROR: You must specify a -func argument to finish your build!!!")
+        exit(1)
     # Do something for the generate command
     p = Path('build/src')
     p.mkdir(exist_ok=True)
@@ -74,13 +95,11 @@ double nocap_{args.func}(double x);
 // double tb[] = {{}};
 {analysis['table_string']}
 double nocap_{args.func}(double x) {{
-    printf("Hello World");
     int index = (x - begin)/granularity;
     if (index > last_index || index < 0) {{
         // Fall back to {args.func}
     }}
-    //return tb[index];
-    return 0;
+    return tb[index];
 }}
     '''
     source.write_text(source_code)
@@ -102,6 +121,7 @@ file_parser = subparsers.add_parser('build_from_file', help='Use file to generat
 file_parser.add_argument('-file', type=str,
     help='File to build lookup table from formatted as space delimited x, y pairs (e.g. x1 y1 x2 y2)')
 clean_parser = subparsers.add_parser('clean', help='Remove created files')
+profile_parser = subparsers.add_parser('build_profile', help='Apply llvm pass to sources and build profile file')
 
 # Parse the command line arguments
 args = parser.parse_args()
@@ -109,6 +129,8 @@ args = parser.parse_args()
 # Call the appropriate function based on the command line arguments
 if args.command == 'build':
     build()
+elif args.command == 'build_profile':
+    build_profile()
 elif args.command == 'build_from_file':
     build_from_file(args.file)
 elif args.command == 'clean':
