@@ -33,7 +33,9 @@ def analyze_file(file):
     with open(file) as f:
         nums = f.read().split()
     assert len(nums)%2 == 0
+    # X := profiled inputs to function
     X = [float(nums[i]) for i in range(0, len(nums), 2)]
+    # Y := profiled outputs of function
     Y = [float(nums[i+1]) for i in range(0, len(nums), 2)]
     begin = min(X)
     end = max(X)
@@ -48,6 +50,7 @@ def analyze_file(file):
     granularity = (end - begin)/num_buckets
     tb = [None for _ in range(int((end-begin)/granularity) + 1)]
     for i in range(len(X)):
+        # TODO: handle -inf, inf, nan
         bucket = int((X[i]-begin)/granularity)
         tb[bucket] = str(Y[i])
     for i in range(len(tb)):
@@ -71,6 +74,8 @@ def build_from_file(file):
 
     for path in Path('test').glob('*.c'):
         shutil.copy(path, p/path.name)
+        # Append '_lookups' to original source file name to reflect slight modifications
+        shutil.move(p/path.name, p/f'{path.stem}_lookups.c')
 
     header = p/f'nocap_{args.func}.h'
     source = p/f'nocap_{args.func}.c'
@@ -85,13 +90,15 @@ def build_from_file(file):
 #define begin {analysis['begin']}
 #define end {analysis['end']}
 #define granularity {analysis['granularity']}
-#define last_index (end - begin)/granularity
-double nocap_{args.func}(double x);
+#define last_index (end - begin) / granularity
+
+extern double nocap_{args.func}(double x);
     '''
     header.write_text(header_code)
 
     source_code = f'''// TODO: properly implement
 #include "nocap_{args.func}.h"
+
 // double tb[] = {{}};
 {analysis['table_string']}
 double nocap_{args.func}(double x) {{
@@ -104,7 +111,10 @@ double nocap_{args.func}(double x) {{
     '''
     source.write_text(source_code)
 
-    text = f'#include "nocap_{args.func}.h"\n#define {args.func}(x) nocap_{args.func}(x)\n'
+    text = f'''#include "nocap_{args.func}.h"
+#define {args.func}(x) nocap_{args.func}(x)
+
+'''
     for path in p.glob('*.c'):
         if 'nocap' not in str(path):
             path.write_text(text + path.read_text())
