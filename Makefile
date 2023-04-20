@@ -1,10 +1,12 @@
+setup:
+	./setup.sh
+
 # Example run: `make compare_exp`
 
 reg_%: test/test_%.c
 	gcc -o outputs/$@ $^ -lm
 
 nocap_%: build/src/nocap_%.c build/src/test_%_lookups.c
-	@python3 nocap.py -f $* build
 	gcc -o outputs/$@ $^
 
 compare_%: nocap_% reg_%
