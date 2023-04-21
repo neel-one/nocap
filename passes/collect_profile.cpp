@@ -4,31 +4,33 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 
-std::vector<std::string> FUNCS_TO_APPROX = {"exp", "log", "log10", "sqrt",
-                                            "cbrt"};
-
 namespace {
-struct Hello : public FunctionPass {
+struct FunctionProfilePass : public FunctionPass {
     static char ID;
-    Hello() : FunctionPass(ID) {
+    FunctionProfilePass() : FunctionPass(ID) {
+    }
+
+    FunctionProfilePass(const std::string &funcName) : FunctionProfilePass() {
+        this->funcName = funcName;
     }
 
     bool runOnFunction(Function &F) override {
         Module *M = F.getParent();
         // TODO: figure out how to not need to hardcode the function.
         bool modified = false;
-        for (auto funcName : FUNCS_TO_APPROX) {
-            modified = modified || getProfileInfo(F, M, funcName);
-        }
+        modified = modified || getProfileInfo(F, M, funcName);
         return modified;
     }
 
    private:
+    std::string funcName = "log";
+
     bool getProfileInfo(Function &F, Module *M, std::string funcName) {
         Function *func = M->getFunction(funcName);
         LLVMContext &context = M->getContext();
@@ -65,10 +67,14 @@ struct Hello : public FunctionPass {
         }
         return true;  // function modified
     }
-};  // end of struct Hello
+};  // end of struct FunctionProfilePass
 }  // end of anonymous namespace
 
-char Hello::ID = 0;
-static RegisterPass<Hello> X("hello", "Hello World Pass",
-                             false /* Only looks at CFG */,
-                             false /* Analysis Pass */);
+static cl::opt<std::string> FPPassFuncName(
+    "fppass-func-name", cl::desc("Name of function to approximate"),
+    cl::value_desc("func-name"), cl::Required);
+
+char FunctionProfilePass::ID = 0;
+static RegisterPass<FunctionProfilePass> X("fppass", "Function profile pass",
+                                           false /* Only looks at CFG */,
+                                           false /* Analysis Pass */);
