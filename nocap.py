@@ -71,11 +71,44 @@ def analyze_file(file):
     granularity = (end - begin)/num_buckets
     print(f'Start = {begin}, End = {end}, Granularity = {granularity}')
     tb = [None for _ in range(int((end-begin)/granularity) + 1)]
+    proxy_computer_source = f'''#include <math.h>
+#include <stdio.h>
+
+int main(int argc, char** argv) {{
+    double tb[] = {{}};
+
+'''
+    is_bucket_computed = [False] * (num_buckets + 1)
     for i in range(len(X)):
         # TODO: handle -inf, inf, nan
         bucket = int((X[i]-begin)/granularity)
-        tb[bucket] = str(Y[i])
+        if not is_bucket_computed[bucket]:
+            # TODO: compute result for median input of bucket
+            median_of_bucket = (bucket*granularity + (bucket+1)*granularity)/2
+            proxy_computer_source += f'''    tb[{bucket}] = {args.func}({median_of_bucket});
+'''
+            is_bucket_computed[bucket] = True
+    proxy_computer_source += f'''
+    for (int i = 0; i < {num_buckets}; i++) {{
+        printf("%f ", tb[i]);
+    }}
+}}
+'''
+    # Create tmp/proxy_computer.c
+    with open('build/tmp/proxy_computer.c', 'w') as f:
+        f.write(proxy_computer_source)
+    # Compile tmp/proxy_computer.c
+    subprocess.run(
+        'clang build/tmp/proxy_computer.c -lm -o build/tmp/proxy_computer', shell=True)
+    # Run tmp/proxy_computer
+    subprocess.run(
+        './build/tmp/proxy_computer > build/tmp/proxy_computer_out', shell=True)
+    # Read tmp/proxy_computer_out
+    with open('build/tmp/proxy_computer_out') as f:
+        tb = f.read().split()
+    # Fill in any missing values
     for i in range(len(tb)):
+        assert tb[i] != None
         if tb[i] is None:
             tb[i] = tb[i-1]
     table_string = f'''double nocap_{args.func}_tb[] = {{ {','.join(tb)} }};'''
@@ -129,6 +162,7 @@ extern double nocap_{args.func}(double x);
 #include "nocap_{args.func}.h"
 
 {analysis['table_string']}
+
 double nocap_{args.func}(double x) {{
     int index = (x - nocap_{args.func}_begin)/nocap_{args.func}_granularity;
     if (index > nocap_{args.func}_last_index || index < 0) {{
