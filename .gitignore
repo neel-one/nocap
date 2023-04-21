@@ -2,3 +2,4 @@ outputs/
 build/
 run.sh
 .vscode
+test/accept-apps

@@ -9,8 +9,10 @@
 
 using namespace llvm;
 
-std::vector<std::string> FUNCS_TO_APPROX = {"exp", "log", "log10", "sqrt",
-                                            "cbrt"};
+// std::vector<std::string> FUNCS_TO_APPROX = {"exp", "log", "log10", "sqrt",
+ //                                          "cbrt"};
+ //
+std::vector<std::string> FUNCS_TO_APPROX = {"log"};
 
 namespace {
 struct Hello : public FunctionPass {
@@ -54,11 +56,11 @@ struct Hello : public FunctionPass {
                         IRBuilder<> builder(call);
                         builder.SetInsertPoint(call);
                         builder.CreateCall(
-                            print, {builder.CreateGlobalStringPtr("%f "), x});
+                            print, {builder.CreateGlobalStringPtr("@@%f "), x});
                         builder.SetInsertPoint(
                             call->getNextNonDebugInstruction());
                         builder.CreateCall(
-                            print, {builder.CreateGlobalStringPtr("%f "), y});
+                            print, {builder.CreateGlobalStringPtr("@@%f "), y});
                     }
                 }
             }
