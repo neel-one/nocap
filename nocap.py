@@ -3,10 +3,6 @@ from pathlib import Path
 import shutil
 import subprocess
 
-# Keep in sync with FUNCS_TO_APPROX in passes/collect_profile.cpp
-# FUNCS_TO_APPROX = ["exp", "log", "log10", "sqrt", "cbrt"]
-FUNCS_TO_APPROX = ["log"]
-
 
 def build():
     build_profile()
@@ -30,7 +26,7 @@ def build_profile():
         f'clang -emit-llvm {src_string} -c -o build/tmp/test.bc', shell=True)
     print(out)
     out = subprocess.run(
-        'opt -enable-new-pm=0 -load build/passes/LLVMPJT.so -hello -o build/tmp/a.bc < build/tmp/test.bc > /dev/null', shell=True)
+        f'opt -enable-new-pm=0 -load build/passes/LLVMPJT.so -fppass -fppass-func-name={args.func} -o build/tmp/a.bc < build/tmp/test.bc > /dev/null', shell=True)
     print(out)
     out = subprocess.run('llc tmp/a.bc -o tmp/a.s', cwd=wd, shell=True)
     print(out)
