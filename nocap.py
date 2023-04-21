@@ -138,9 +138,13 @@ double nocap_{args.func}(double x) {{
 '''
     source.write_text(source_code)
 
-    text = f'''#include "nocap_{args.func}.h"
-#define {args.func}(x) nocap_{args.func}(x)
-
+    funcs = []
+    for file in p.glob("nocap_*.h"):
+        funcs.append(file.name[len('nocap_'):-2])
+    text = ''
+    for func in funcs:
+        text += f'''#include "nocap_{func}.h"
+#define {func}(x) nocap_{func}(x)
 '''
     for path in p.glob('*.c'):
         if 'nocap' not in str(path):
