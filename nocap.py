@@ -70,47 +70,55 @@ def analyze_file(file):
     num_buckets = 100
     granularity = (end - begin)/num_buckets
     print(f'Start = {begin}, End = {end}, Granularity = {granularity}')
-    tb = [None for _ in range(int((end-begin)/granularity) + 1)]
-    proxy_computer_source = f'''#include <math.h>
+    tb = [None for _ in range(num_buckets)]
+
+    #### Use median of bucket to compute function value for bucket ####
+    if args.bucketsFill:
+        proxy_computer_source = f'''#include <math.h>
 #include <stdio.h>
 
 int main(int argc, char** argv) {{
-    double tb[] = {{}};
+    double tb[{num_buckets}] = {{}};
 
 '''
-    is_bucket_computed = [False] * (num_buckets + 1)
-    for i in range(len(X)):
-        # TODO: handle -inf, inf, nan
-        bucket = int((X[i]-begin)/granularity)
-        if not is_bucket_computed[bucket]:
-            # TODO: compute result for median input of bucket
-            median_of_bucket = (bucket*granularity + (bucket+1)*granularity)/2
+        for bucket in range(num_buckets):
+            median_of_bucket = begin + \
+                (bucket*granularity + (bucket+1)*granularity)/2
             proxy_computer_source += f'''    tb[{bucket}] = {args.func}({median_of_bucket});
 '''
-            is_bucket_computed[bucket] = True
-    proxy_computer_source += f'''
-    for (int i = 0; i < {num_buckets}; i++) {{
+
+        proxy_computer_source += f'''
+    for (int i = 0; i < {num_buckets}; ++i) {{
         printf("%f ", tb[i]);
     }}
 }}
 '''
-    # Create tmp/proxy_computer.c
-    with open('build/tmp/proxy_computer.c', 'w') as f:
-        f.write(proxy_computer_source)
-    # Compile tmp/proxy_computer.c
-    subprocess.run(
-        'clang build/tmp/proxy_computer.c -lm -o build/tmp/proxy_computer', shell=True)
-    # Run tmp/proxy_computer
-    subprocess.run(
-        './build/tmp/proxy_computer > build/tmp/proxy_computer_out', shell=True)
-    # Read tmp/proxy_computer_out
-    with open('build/tmp/proxy_computer_out') as f:
-        tb = f.read().split()
-    # Fill in any missing values
-    for i in range(len(tb)):
-        assert tb[i] != None
-        if tb[i] is None:
-            tb[i] = tb[i-1]
+
+        # Create tmp/proxy_computer.c
+        with open('build/tmp/proxy_computer.c', 'w') as f:
+            f.write(proxy_computer_source)
+        # Compile tmp/proxy_computer.c
+        out = subprocess.run(
+            'clang build/tmp/proxy_computer.c -lm -o build/tmp/proxy_computer', shell=True)
+        print(out)
+        # Run tmp/proxy_computer
+        out = subprocess.run(
+            './build/tmp/proxy_computer > build/tmp/proxy_computer_out', shell=True)
+        print(out)
+        # Read tmp/proxy_computer_out
+        with open('build/tmp/proxy_computer_out') as f:
+            tb = f.read().split()
+
+    else:  # Use only test program's outputs ####
+        for i in range(len(X)):
+            # TODO: handle -inf, inf, nan
+            bucket = int((X[i]-begin)/granularity) - 1  # 0-indexed
+            tb[bucket] = str(Y[i])
+
+        for bucket in range(num_buckets):
+            if tb[bucket] is None:
+                tb[bucket] = tb[bucket-1]
+
     table_string = f'''double nocap_{args.func}_tb[] = {{ {','.join(tb)} }};'''
     return {
         'begin': begin,
@@ -164,11 +172,11 @@ extern double nocap_{args.func}(double x);
 {analysis['table_string']}
 
 double nocap_{args.func}(double x) {{
-    int index = (x - nocap_{args.func}_begin)/nocap_{args.func}_granularity;
-    if (index > nocap_{args.func}_last_index || index < 0) {{
+    int bucket_idx = (x - nocap_{args.func}_begin)/nocap_{args.func}_granularity;
+    if (bucket_idx > nocap_{args.func}_last_index || bucket_idx < 0) {{
         // Fall back to {args.func}
     }}
-    return nocap_tb[index];
+    return nocap_tb[bucket_idx];
 }}
 '''
     source.write_text(source_code)
@@ -189,11 +197,13 @@ double nocap_{args.func}(double x) {{
 # Set up the argument parser
 parser = argparse.ArgumentParser(description='Run NOCAP.')
 parser.add_argument('-func', type=str,
-                    help='Name of the function to create lookup table for.')
+                    help='Name of the function to create lookup table for.', required=True)
 parser.add_argument('-testName', type=str,
-                    help='Name of the folder within test/ in which the test file is located.')
+                    help='Name of the folder within test/ in which the test file is located.', required=True)
 parser.add_argument('-args', type=str, default='',
                     help='Command line arguments for test file (optional)')
+parser.add_argument('-bucketsFill', default=False, action='store_true',
+                    help='Fill buckets with function computed for median of bucket.')
 
 # Create subparsers for the build and generate commands
 subparsers = parser.add_subparsers(title='Commands', dest='command')
