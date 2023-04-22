@@ -11,16 +11,19 @@
 using namespace llvm;
 
 namespace {
+
+static cl::opt<std::string> FPPassFuncName(
+    "fppass-func-name", cl::desc("Name of function to approximate"),
+    cl::value_desc("func-name"), cl::Required);
+
 struct FunctionProfilePass : public FunctionPass {
     static char ID;
     FunctionProfilePass() : FunctionPass(ID) {
-    }
-
-    FunctionProfilePass(const std::string &funcName) : FunctionProfilePass() {
-        this->funcName = funcName;
+        this->funcName = FPPassFuncName.getValue();
     }
 
     bool runOnFunction(Function &F) override {
+	assert(funcName != "");
         Module *M = F.getParent();
         // TODO: figure out how to not need to hardcode the function.
         bool modified = false;
@@ -29,7 +32,7 @@ struct FunctionProfilePass : public FunctionPass {
     }
 
    private:
-    std::string funcName = "log";
+    std::string funcName = "";
 
     bool getProfileInfo(Function &F, Module *M, std::string funcName) {
         Function *func = M->getFunction(funcName);
@@ -68,11 +71,12 @@ struct FunctionProfilePass : public FunctionPass {
         return true;  // function modified
     }
 };  // end of struct FunctionProfilePass
+
+
+
 }  // end of anonymous namespace
 
-static cl::opt<std::string> FPPassFuncName(
-    "fppass-func-name", cl::desc("Name of function to approximate"),
-    cl::value_desc("func-name"), cl::Required);
+
 
 char FunctionProfilePass::ID = 0;
 static RegisterPass<FunctionProfilePass> X("fppass", "Function profile pass",

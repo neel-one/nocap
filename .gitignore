@@ -3,3 +3,5 @@ build/
 run.sh
 .vscode
 test/accept-apps
+test/blackscholes/in_10M.txt
+test/blackscholes/in_10M.txt.Z	
