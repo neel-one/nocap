@@ -31,10 +31,12 @@ def build_profile():
     out = subprocess.run('llc tmp/a.bc -o tmp/a.s', cwd=wd, shell=True)
     print(out)
     # TODO: make this resilient to user LDFlags/Compiler flags (they should define compilation not us...)
-    out = subprocess.run('clang tmp/a.s -no-pie -lm -o tmp/a', cwd=wd, shell=True)
+    out = subprocess.run(
+        'clang tmp/a.s -no-pie -lm -o tmp/a', cwd=wd, shell=True)
     print(out)
     # TODO: take in potential command line input
-    out = subprocess.run(f'build/tmp/a {args.args} > build/tmp/a_out', shell=True)
+    out = subprocess.run(
+        f'build/tmp/a {args.args} > build/tmp/a_out', shell=True)
     print(out)
 
 
@@ -76,7 +78,7 @@ def analyze_file(file):
     for i in range(len(tb)):
         if tb[i] is None:
             tb[i] = tb[i-1]
-    table_string = f'''double nocap_tb[] = {{ {','.join(tb)} }};'''
+    table_string = f'''double nocap_{args.func}_tb[] = {{ {','.join(tb)} }};'''
     return {
         'begin': begin,
         'end': end,
@@ -93,13 +95,13 @@ def build_from_file(file):
     p = Path('build/src')
     p.mkdir(exist_ok=True)
     if args.testName is None:
-            print("ERROR: You must specify a -testName argument to build!!!")
-            exit(1)
+        print("ERROR: You must specify a -testName argument to build!!!")
+        exit(1)
     test_dir = Path('test')/args.testName
     for path in test_dir.glob(f'*.c'):
         shutil.copy(path, p/path.name)
         shutil.move(p/path.name, p/f'{path.stem}_lookups.c')
-    #for path in Path('test').glob('*.c'):
+    # for path in Path('test').glob('*.c'):
     #    shutil.copy(path, p/path.name)
         # Append '_lookups' to original source file name to reflect slight modifications
     #    shutil.move(p/path.name, p/f'{path.stem}_lookups.c')
@@ -114,23 +116,22 @@ def build_from_file(file):
 
     header_code = f'''
 #include <stdio.h>
-#define nocap_begin {analysis['begin']}
-#define nocap_end {analysis['end']}
-#define nocap_granularity {analysis['granularity']}
-#define nocap_last_index (nocap_end - nocap_begin) / nocap_granularity
+#define nocap_{args.func}_begin {analysis['begin']}
+#define nocap_{args.func}_end {analysis['end']}
+#define nocap_{args.func}_granularity {analysis['granularity']}
+#define nocap_{args.func}_last_index (nocap_{args.func}_end - nocap_{args.func}_begin) / nocap_{args.func}_granularity
 
 extern double nocap_{args.func}(double x);
 '''
     header.write_text(header_code)
 
-    source_code = f'''
-#include <math.h>
+    source_code = f'''#include <math.h>
 #include "nocap_{args.func}.h"
 
 {analysis['table_string']}
 double nocap_{args.func}(double x) {{
-    int index = (x - nocap_begin)/nocap_granularity;
-    if (index > nocap_last_index || index < 0) {{
+    int index = (x - nocap_{args.func}_begin)/nocap_{args.func}_granularity;
+    if (index > nocap_{args.func}_last_index || index < 0) {{
         // Fall back to {args.func}
     }}
     return nocap_tb[index];
@@ -157,7 +158,8 @@ parser.add_argument('-func', type=str,
                     help='Name of the function to create lookup table for.')
 parser.add_argument('-testName', type=str,
                     help='Name of the folder within test/ in which the test file is located.')
-parser.add_argument('-args', type=str, default='', help='Command line arguments for test file (optional)')
+parser.add_argument('-args', type=str, default='',
+                    help='Command line arguments for test file (optional)')
 
 # Create subparsers for the build and generate commands
 subparsers = parser.add_subparsers(title='Commands', dest='command')
