@@ -34,7 +34,6 @@ def build_profile():
     out = subprocess.run(
         'clang tmp/a.s -no-pie -lm -o tmp/a', cwd=wd, shell=True)
     print(out)
-    # TODO: take in potential command line input
     out = subprocess.run(
         f'build/tmp/a {args.args} > build/tmp/a_out', shell=True)
     print(out)
@@ -67,7 +66,7 @@ def analyze_file(file):
 
     # For simplicity, assume 100 buckets
     # TODO: define granularity in a more sophisticated manner
-    num_buckets = 100
+    num_buckets = args.numBuckets
     granularity = (end - begin)/num_buckets
     print(f'Start = {begin}, End = {end}, Granularity = {granularity}')
     tb = [None for _ in range(num_buckets)]
@@ -204,6 +203,8 @@ parser.add_argument('-args', type=str, default='',
                     help='Command line arguments for test file (optional)')
 parser.add_argument('-bucketsFill', default=False, action='store_true',
                     help='Fill buckets with function computed for median of bucket.')
+parser.add_argument('-numBuckets', type=int, default=100,
+                    help='Number of buckets to use to build lookup table.')
 
 # Create subparsers for the build and generate commands
 subparsers = parser.add_subparsers(title='Commands', dest='command')
