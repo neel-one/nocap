@@ -197,9 +197,9 @@ double nocap_{args.func}(double x) {{
 # Set up the argument parser
 parser = argparse.ArgumentParser(description='Run NOCAP.')
 parser.add_argument('-func', type=str,
-                    help='Name of the function to create lookup table for.', required=True)
+                    help='Name of the function to create lookup table for.')
 parser.add_argument('-testName', type=str,
-                    help='Name of the folder within test/ in which the test file is located.', required=True)
+                    help='Name of the folder within test/ in which the test file is located.')
 parser.add_argument('-args', type=str, default='',
                     help='Command line arguments for test file (optional)')
 parser.add_argument('-bucketsFill', default=False, action='store_true',
