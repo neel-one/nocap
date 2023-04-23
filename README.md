@@ -36,7 +36,7 @@ Example usage, given a test program `<project-root>/test/test_exp_log.c`:
 # Create `build`, `outputs` directories, execute LLVM pass on test/*.c
 make setup
 # Run NOCAP on test/blackscholes/blackscholes.c, approximating `log` functions
-python3 nocap.py -t blackscholes -f log -args "1 test/blackscholes/in_10M.txt /dev/null" build
+python3 nocap.py -t blackscholes -f log -args "1 test/blackscholes/in_10M.txt /dev/null" -b build
 
 # Compile the original and NOCAP'd programs
 gcc -o outputs/reg_blackscholes test/blackscholes/blackscholes.c -lm
