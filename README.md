@@ -28,12 +28,21 @@ Example usage, given a test program `<project-root>/test/test_exp_log.c`:
 # │   └── collect_profile.cpp
 # ├── setup.sh
 # └── test
-#     └── test_exp_log.c
+#     └── exp_log
+#         ├── test_exp_log.c
+#     └── blackscholes
+#         ├── blackscholes.c
 
 # Create `build`, `outputs` directories, execute LLVM pass on test/*.c
 make setup
-# Run NOCAP on test_exp_log.c, approximating `log` functions
-python3 nocap.py -t test_exp_log -f log
-# Compare the output of the original and NOCAP'd programs
-make compare_exp_log FUNC=log
+# Run NOCAP on test/blackscholes/blackscholes.c, approximating `log` functions
+python3 nocap.py -t blackscholes -f log -args "1 test/blackscholes/in_10M.txt /dev/null" build
+
+# Compile the original and NOCAP'd programs
+gcc -o outputs/reg_blackscholes test/blackscholes/blackscholes.c -lm
+gcc -o outputs/nocap_blackscholes build/src/blackscholes_lookups.c build/src/nocap_log.c -lm
+
+# Compare the runtime of the original and NOCAP'd programs
+time outputs/reg_blackscholes
+time outputs/nocap_blackscholes
 ```

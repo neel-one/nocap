@@ -3,22 +3,29 @@ setup:
 
 # Example usage: 
 #   $ make setup
-#   $ python3 nocap.py -t test_exp_log -f log
+#   $ python3 nocap.py -t blackscholes -f log -args "1 test/blackscholes/in_100M.txt /dev/null" build
 #   $ make compare_exp_log FUNC=log
 
-reg_%: test/test_%.c
-	gcc -o outputs/$@ $^ -lm
+BUILD_DIR=build/src
+OUTPUT_DIR=outputs
 
-nocap_%: build/src/test_%_lookups.c
-	gcc -o outputs/$@ $^ build/src/nocap_$(FUNC).c -lm
+reg_%: test/%/*.c
+	gcc -o $(OUTPUT_DIR)/$@ $^ -lm
 
+# TODO: Fix this target
+nocap_%: $(BUILD_DIR)/%_lookups.c
+	C_FILES=()
+	$(foreach func, $(FUNCS), C_FILES+=(build/src/nocap_$(func).c);)
+	gcc -o $(OUTPUT_DIR)/$@ $^ $(C_FILES) -lm
+
+# TODO: Fix this target
 compare_%: nocap_% reg_%
 	@echo "Comparing nocap_$* with (baseline) reg_$*"
 	@echo "-------------------------------------"
 	@echo "------------- nocap_$* --------------"
-	@time outputs/nocap_$*
+	@time $(OUTPUT_DIR)/nocap_$*
 	@echo "------------- reg_$* --------------"
-	@time outputs/reg_$*
+	@time $(OUTPUT_DIR)/reg_$*
 
 clean: 
 	rm -rf outputs/*

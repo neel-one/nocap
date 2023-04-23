@@ -176,7 +176,7 @@ double nocap_{args.func}(double x) {{
     if (bucket_idx > nocap_{args.func}_last_index || bucket_idx < 0) {{
         // Fall back to {args.func}
     }}
-    return nocap_tb[bucket_idx];
+    return nocap_{args.func}_tb[bucket_idx];
 }}
 '''
     source.write_text(source_code)
