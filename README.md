@@ -39,13 +39,13 @@ make setup
 python3 nocap.py -t blackscholes -f log -args "1 test/blackscholes/in_10M.txt /dev/null" -b build
 
 # Compile the original and NOCAP'd programs
-gcc -o outputs/reg_blackscholes test/blackscholes/blackscholes.c -lm -ftime-report
-gcc -o outputs/nocap_blackscholes build/src/blackscholes_lookups.c build/src/nocap_log.c -lm -ftime-report
+gcc -o outputs/reg_blackscholes test/blackscholes/blackscholes.c -lm
+gcc -o outputs/nocap_blackscholes build/src/blackscholes_lookups.c build/src/nocap_log.c -lm
 
 # Compare the runtime of the original and NOCAP'd programs
 time outputs/reg_blackscholes 1 test/blackscholes/in_10M.txt /dev/null
 time outputs/nocap_blackscholes 1 test/blackscholes/in_10M.txt /dev/null
 
 # Measure normalized error between original and NOCAP'd programs
-./blackscholes-accuracy.sh
+test/blackscholes/blackscholes-accuracy.sh
 ```
