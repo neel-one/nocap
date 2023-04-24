@@ -9,6 +9,10 @@ fi
 if [ ! -d "./build" ]; then
     mkdir build
 fi
+# Create ./build/exe/ directory if it doesn't exist
+if [ ! -d "./build/exe" ]; then
+    mkdir build/exe
+fi
 cd build
 cmake ..
 make -j4

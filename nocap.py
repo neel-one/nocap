@@ -2,11 +2,12 @@ import argparse
 from pathlib import Path
 import shutil
 import subprocess
+import re
 
 
 def build():
     build_profile()
-    build_from_file('build/tmp/a_out')
+    build_from_file(f'build/exe/{args.func}_out')
 
 
 def build_profile():
@@ -35,7 +36,7 @@ def build_profile():
         'clang tmp/a.s -no-pie -lm -o tmp/a', cwd=wd, shell=True)
     print(out)
     out = subprocess.run(
-        f'build/tmp/a {args.args} > build/tmp/a_out', shell=True)
+        f'build/tmp/a {args.args} > build/exe/{args.func}_out', shell=True)
     print(out)
 
 
@@ -48,7 +49,7 @@ def clean():
         path.unlink()
 
 
-def analyze_file(file):
+def analyze_file(file, func):
     with open(file) as f:
         nums = f.read().split()
     nums = [s[2:] for s in nums if s.startswith('@@')]
@@ -83,7 +84,7 @@ int main(int argc, char** argv) {{
         for bucket in range(num_buckets):
             median_of_bucket = begin + \
                 (bucket*granularity + (bucket+1)*granularity)/2
-            proxy_computer_source += f'''    tb[{bucket}] = {args.func}({median_of_bucket});
+            proxy_computer_source += f'''    tb[{bucket}] = {func}({median_of_bucket});
 '''
 
         proxy_computer_source += f'''
@@ -118,19 +119,29 @@ int main(int argc, char** argv) {{
             if tb[bucket] is None:
                 tb[bucket] = tb[bucket-1]
 
-    table_string = f'''double nocap_{args.func}_tb[] = {{ {','.join(tb)} }};'''
+    table_string = f'''double nocap_{func}_tb[] = {{ {','.join(tb)} }};'''
     return {
-        'begin': begin,
-        'end': end,
-        'table_string': table_string,
-        'granularity': granularity
+        f'{func}': {
+            'begin': begin,
+            'end': end,
+            'table_string': table_string,
+            'granularity': granularity
+        }
     }
 
 
 def build_from_file(file):
-    if args.func is None:
-        print("ERROR: You must specify a -func argument to finish your build!!!")
+    if args.func is None and args.funcs is None:
+        print("ERROR: You must specify either a -func or -funcs argument to finish your build!!!")
         exit(1)
+
+    # Either build with multiple functions approximated, or just one. NOT both.
+    assert (args.func is not None) ^ (args.funcs is not None)
+
+    # Just use the executable corresponding to any one of the functions
+    func = args.func if args.func is not None else args.funcs[0]
+    file = f'build/exe/{func}_out'
+
     # Do something for the generate command
     p = Path('build/src')
     p.mkdir(exist_ok=True)
@@ -141,62 +152,64 @@ def build_from_file(file):
     for path in test_dir.glob(f'*.c'):
         shutil.copy(path, p/path.name)
         shutil.move(p/path.name, p/f'{path.stem}_lookups.c')
-    # for path in Path('test').glob('*.c'):
-    #    shutil.copy(path, p/path.name)
-        # Append '_lookups' to original source file name to reflect slight modifications
-    #    shutil.move(p/path.name, p/f'{path.stem}_lookups.c')
 
-    header = p/f'nocap_{args.func}.h'
-    source = p/f'nocap_{args.func}.c'
+    # Create .h, .c for each function-to-approximate
+    lookups_text = ''
+    funcs = args.funcs if args.funcs is not None else [args.func]
+    for func in funcs:
+        header = p/f'nocap_{func}.h'
+        source = p/f'nocap_{func}.c'
 
-    header.touch(exist_ok=True)
-    source.touch(exist_ok=True)
+        header.touch(exist_ok=True)
+        source.touch(exist_ok=True)
 
-    analysis = analyze_file(file)
+        analysis = analyze_file(file, func)
 
-    header_code = f'''
+        header_code = f'''
 #include <stdio.h>
-#define nocap_{args.func}_begin {analysis['begin']}
-#define nocap_{args.func}_end {analysis['end']}
-#define nocap_{args.func}_granularity {analysis['granularity']}
-#define nocap_{args.func}_last_index (nocap_{args.func}_end - nocap_{args.func}_begin) / nocap_{args.func}_granularity
+#define nocap_{func}_begin {analysis[func]['begin']}
+#define nocap_{func}_end {analysis[func]['end']}
+#define nocap_{func}_granularity {analysis[func]['granularity']}
+#define nocap_{func}_last_index (nocap_{func}_end - nocap_{func}_begin) / nocap_{func}_granularity
 
-extern double nocap_{args.func}(double x);
+extern double nocap_{func}(double x);
 '''
-    header.write_text(header_code)
+        header.write_text(header_code)
 
-    source_code = f'''#include <math.h>
-#include "nocap_{args.func}.h"
+        source_code = f'''#include <math.h>
+#include "nocap_{func}.h"
 
-{analysis['table_string']}
+{analysis[func]['table_string']}
 
-double nocap_{args.func}(double x) {{
-    int bucket_idx = (x - nocap_{args.func}_begin)/nocap_{args.func}_granularity;
-    if (bucket_idx > nocap_{args.func}_last_index || bucket_idx < 0) {{
-        // Fall back to {args.func}
+double nocap_{func}(double x) {{
+    int bucket_idx = (x - nocap_{func}_begin)/nocap_{func}_granularity;
+    if (bucket_idx > nocap_{func}_last_index || bucket_idx < 0) {{
+        // Fall back to {func}
     }}
-    return nocap_{args.func}_tb[bucket_idx];
+    return nocap_{func}_tb[bucket_idx];
 }}
 '''
-    source.write_text(source_code)
+        source.write_text(source_code)
 
-    funcs = []
-    for file in p.glob("nocap_*.h"):
-        funcs.append(file.name[len('nocap_'):-2])
-    text = ''
-    for func in funcs:
-        text += f'''#include "nocap_{func}.h"
-#define {func}(x) nocap_{func}(x)
+    # Add #include "nocap_{func}.h" to all .c files in build/src
+        lookups_text += f'''#include "nocap_{func}.h"
 '''
+
+    # Replace calls to func with nocap_{func} calls
     for path in p.glob('*.c'):
         if 'nocap' not in str(path):
-            path.write_text(text + path.read_text())
+            path.write_text(lookups_text + path.read_text())
+            for func in funcs:
+                path.write_text(re.sub(
+                    rf'\b{func}\b', f'nocap_{func}', path.read_text()))
 
 
 # Set up the argument parser
 parser = argparse.ArgumentParser(description='Run NOCAP.')
 parser.add_argument('-func', type=str,
                     help='Name of the function to create lookup table for.')
+parser.add_argument('-funcs', type=str, nargs='+',
+                    help='Names of the functions to create lookup tables for.')
 parser.add_argument('-testName', type=str,
                     help='Name of the folder within test/ in which the test file is located.')
 parser.add_argument('-args', type=str, default='',
