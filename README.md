@@ -29,7 +29,7 @@ Example usage, given a test program `<project-root>/test/test_exp_log.c`:
 # ├── setup.sh
 # └── test
 #     └── exp_log
-#         ├── test_exp_log.c
+#         ├── exp_log.c
 #     └── blackscholes
 #         ├── blackscholes.c
 
@@ -43,8 +43,8 @@ gcc -o outputs/reg_blackscholes test/blackscholes/blackscholes.c -lm
 gcc -o outputs/nocap_blackscholes build/src/blackscholes_lookups.c build/src/nocap_log.c -lm
 
 # Compare the runtime of the original and NOCAP'd programs
-time outputs/reg_blackscholes 1 test/blackscholes/in_10M.txt /dev/null
-time outputs/nocap_blackscholes 1 test/blackscholes/in_10M.txt /dev/null
+time outputs/reg_blackscholes 1 test/blackscholes/in_10M.txt /dev/null # Read real time
+time outputs/nocap_blackscholes 1 test/blackscholes/in_10M.txt /dev/null # Read real time
 
 # Measure normalized error between original and NOCAP'd programs
 test/blackscholes/blackscholes-accuracy.sh

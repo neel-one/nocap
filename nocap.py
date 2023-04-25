@@ -7,7 +7,7 @@ import re
 
 def build():
     build_profile()
-    build_from_file(f'build/exe/{args.func}_out')
+    build_from_file(f'build/out/{args.func}_out')
 
 
 def build_profile():
@@ -36,7 +36,7 @@ def build_profile():
         'clang tmp/a.s -no-pie -lm -o tmp/a', cwd=wd, shell=True)
     print(out)
     out = subprocess.run(
-        f'build/tmp/a {args.args} > build/exe/{args.func}_out', shell=True)
+        f'build/tmp/a {args.args} > build/out/{args.func}_out', shell=True)
     print(out)
 
 
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {{
             if tb[bucket] is None:
                 tb[bucket] = tb[bucket-1]
 
-    table_string = f'''double nocap_{func}_tb[] = {{ {','.join(tb)} }};'''
+    table_string = f'''double nocap_{func}_tb[] = {{ {', '.join(tb)} }};'''
     return {
         f'{func}': {
             'begin': begin,
@@ -140,7 +140,7 @@ def build_from_file(file):
 
     # Just use the executable corresponding to any one of the functions
     func = args.func if args.func is not None else args.funcs[0]
-    file = f'build/exe/{func}_out'
+    file = f'build/out/{func}_out'
 
     # Do something for the generate command
     p = Path('build/src')
@@ -185,6 +185,7 @@ double nocap_{func}(double x) {{
     int bucket_idx = (x - nocap_{func}_begin)/nocap_{func}_granularity;
     if (bucket_idx > nocap_{func}_last_index || bucket_idx < 0) {{
         // Fall back to {func}
+        return {func}(x);
     }}
     return nocap_{func}_tb[bucket_idx];
 }}
