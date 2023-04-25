@@ -2,16 +2,7 @@
 
 FUNCS=("log" "sqrt" "exp")
 
-NUM_BUCKETS=()
-
-# 10 to 500 in steps of 10
-for (( i=1; i<10; i+=1 )); do
-  NUM_BUCKETS+=($i)
-done
-
-for (( i=10; i<=100; i+=10 )); do
-  NUM_BUCKETS+=($i)
-done
+NUM_BUCKETS=(500 600 700 800)
 
 # Benchmark accuracy vs #buckets for all functions approximated
 OUTPUT_FILE="blackscholes-accuracy-vs-buckets-combined.txt"

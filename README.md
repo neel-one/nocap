@@ -10,6 +10,37 @@ We implement an algorithm that approximates continuous functions with a lookup t
 4. Build a lookup table.
 5. Replace all calls to function of interest with a call to the lookup table.
 
+```
+$ python3 nocap.py
+usage: nocap.py [-h] [-func FUNC] [-funcs FUNCS [FUNCS ...]]
+                [-testName TESTNAME] [-args ARGS] [-bucketsFill]
+                [-numBuckets NUMBUCKETS]
+                {build,build_from_file,clean,build_profile} ...
+
+Run NOCAP.
+
+options:
+  -h, --help            show this help message and exit
+  -func FUNC            Name of the function to create lookup table for.
+  -funcs FUNCS [FUNCS ...]
+                        Names of the functions to create lookup tables
+                        for.
+  -testName TESTNAME    Name of the folder within test/ in which the test
+                        file is located.
+  -args ARGS            Command line arguments for test file (optional)
+  -bucketsFill          Fill buckets with function computed for median of
+                        bucket.
+  -numBuckets NUMBUCKETS
+                        Number of buckets to use to build lookup table.
+
+Commands:
+  {build,build_from_file,clean,build_profile}
+    build               Build profile and generate new source files
+    build_from_file     Use file to generate new source files
+    clean               Remove created files
+    build_profile       Apply llvm pass to sources and build profile file
+```
+
 ## Usage
 
 Example usage, given a test program `<project-root>/test/test_exp_log.c`:

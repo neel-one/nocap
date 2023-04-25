@@ -1,19 +1,19 @@
 #!/bin/bash
-NUM_BUCKETS=()
+NUM_BUCKETS=(1000 3000 5000 10000)
 
-# 10 to 500 in steps of 10
-for (( i=1; i<10; i+=1 )); do
-  NUM_BUCKETS+=($i)
-done
+# # 10 to 500 in steps of 10
+# for (( i=1; i<10; i+=1 )); do
+#   NUM_BUCKETS+=($i)
+# done
 
-for (( i=10; i<=100; i+=10 )); do
-  NUM_BUCKETS+=($i)
-done
+# for (( i=10; i<=100; i+=10 )); do
+#   NUM_BUCKETS+=($i)
+# done
 
 FUNC=$1
 OUTPUT_FILE="blackscholes-accuracy-vs-buckets-$FUNC.txt"
 # Clear the output file blackscholes-accuracy-vs-buckets.txt
-echo -n "" > $OUTPUT_FILE
+# echo -n "" > $OUTPUT_FILE
 
 # Build profile for {FUNC} if it doesn't exist
 if [ ! -f "build/out/$FUNC_out" ]; then
